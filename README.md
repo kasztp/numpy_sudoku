@@ -1,4 +1,4 @@
-# Sudoku solver experiment with Numpy, backtracking and some optimizations
+# Sudoku solver experiment with Numpy, backtracking and some optimizations [![Pylint](https://github.com/kasztp/numpy_sudoku/actions/workflows/pylint.yml/badge.svg)](https://github.com/kasztp/numpy_sudoku/actions/workflows/pylint.yml)
 Sudoku solver for 9x9 size.
 
 Usage: _main.py </path_to/input_file>_
