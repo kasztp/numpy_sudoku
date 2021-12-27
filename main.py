@@ -2,6 +2,7 @@ import argparse
 from collections import Counter
 from copy import deepcopy
 from math import sqrt
+import sys
 from time import time
 import numpy as np
 
@@ -15,12 +16,14 @@ FILENAME = args.input_file
 
 
 def load_from_csv(filename):
+    """ Function to load input from .csv, and perform basic input checking. """
     parsed = np.loadtxt(filename, delimiter=",", dtype=np.uint8)
     print('Board loaded successfully.')
-    size = int(len(parsed[0]))
-    if size not in (9, 16):
+    size = len(parsed)
+
+    if size not in (9, 16) or parsed.shape[0] != parsed.shape[1]:
         print('Unsupported board size detected, exiting. (9x9 or 16x16 are supported as of now.)')
-        exit(1)
+        sys.exit(1)
     if size == 16:
         start = 1
         end = 17
@@ -28,11 +31,15 @@ def load_from_csv(filename):
         start = 1
         end = 10
     dimensions = (start, end)
-    print(f'Board size detected: {size}x{size}')
+
+    if args.verbose:
+        print(f'Board size detected: {size}x{size}')
     return parsed, size, dimensions
 
 
 def create_mask(board: np.ndarray, dimensions: tuple[int, int]) -> list[list[int]]:
+    """ Function to create Mask of possible valid values based on the initial sudoku Board. """
+
     mask = list(board.tolist())
     counts = Counter(board.flatten())
     del counts[0]
@@ -58,6 +65,7 @@ def create_mask(board: np.ndarray, dimensions: tuple[int, int]) -> list[list[int
 
 
 def update_mask(board: np.ndarray, mask: list[list[int]], box_size: int) -> list[list[int]]:
+    """ Function to update Mask of possible valid values. """
 
     def is_list(item):
         return isinstance(item, list)
@@ -75,9 +83,9 @@ def update_mask(board: np.ndarray, mask: list[list[int]], box_size: int) -> list
 
 
 def update_board(board: np.ndarray, mask: list[list[int]]) -> (np.ndarray, [list[int]]):
+    """ Function to update Board based on possible values Mask. """
 
     def is_one_element_list(item):
-        # print(f'{type(item)} : {item}')
         return bool(isinstance(item, list) and len(item) == 1)
 
     for y_pos, row in enumerate(mask):
@@ -85,32 +93,36 @@ def update_board(board: np.ndarray, mask: list[list[int]]) -> (np.ndarray, [list
             x_pos = row.index(number)
             num = number.pop()
             board[y_pos][x_pos] = num
-            # mask[y_pos][x_pos] = num
     return board, mask
 
 
 def preprocess_board(board: np.ndarray, box_size: int) -> (np.ndarray, [list[int]]):
+    """ Board preprocessor to reduce necessary iterations during solving. """
+
     mask = create_mask(board, dimensions)
     temp_mask = None
     passes = 0
+
     while temp_mask != mask:
         passes += 1
         temp_mask = deepcopy(mask)
         mask = update_mask(board, mask, box_size)
         board, mask = update_board(board, mask)
         # temp_mask = update_mask(board, mask, box_size)
-    print(f'Preprocess passes: {passes}')
+    if args.verbose:
+        print(f'Preprocess passes: {passes}')
+
     return np.array(board), mask
 
 
 def solve(board: np.ndarray, mask, size: int, box_size: int, dimensions: tuple[int, int]) -> bool:
+    """ Function to solve Sudoku with backtracking. """
     solve.iterations += 1
 
     find = find_empty(board)
     if not find:
         return True
-    else:
-        row, col = find
+    row, col = find
 
     for number in mask[row][col]:
         if valid(board, number, (row, col), box_size):
@@ -123,6 +135,7 @@ def solve(board: np.ndarray, mask, size: int, box_size: int, dimensions: tuple[i
 
 
 def valid(board: np.ndarray, number: int, pos: tuple[int, int], box_size: int) -> bool:
+    """ Function to check if a given value is valid for the specific location of the sudoku. """
     # Check row
     location = np.where(board[pos[0]] == number)
     if len(location[0]):
@@ -146,11 +159,12 @@ def valid(board: np.ndarray, number: int, pos: tuple[int, int], box_size: int) -
 
 
 def print_board(board: np.ndarray, size: int, box_size: int) -> None:
+    """ Pretty print Sudoku board. """
     for i, row in enumerate(board):
         if i % box_size == 0 and i != 0:
             print('- - - - - - - - - - - -')
 
-        for j, col in enumerate(row):
+        for j, _ in enumerate(row):
             if j % box_size == 0 and j != 0:
                 print(' | ', end='')
 
@@ -160,14 +174,16 @@ def print_board(board: np.ndarray, size: int, box_size: int) -> None:
                 print(str(board[i, j]) + ' ', end='')
 
 
-def print_mask(mask: np.ndarray, box_size: int) -> None:
-    for i, row in enumerate(mask):
+def print_mask(mask_to_print: np.ndarray, box_size: int) -> None:
+    """ Pretty print Mask of possible valid values. """
+    for i, row in enumerate(mask_to_print):
         if i % box_size == 0 and i != 0:
             print('- - - - - - - - - - - -')
         print(row)
 
 
 def find_empty(board: np.ndarray) -> tuple[int, int] or None:
+    """ Find empty location to be filled in Sudoku. """
     location = np.argwhere(board == 0)
     if np.any(location):
         return location[0][0], location[0][1]  # row, column
@@ -191,5 +207,6 @@ if __name__ == '__main__':
     print('_______________________\n')
     print_board(sudoku, size, box_size)
     print('_______________________\n')
-    print(f'Iterations: {solve.iterations}\n')
-    print(end_time - start_time)
+    if args.verbose:
+        print(f'Iterations: {solve.iterations}\n')
+    print(f'Time to solve: {round(end_time - start_time, 6)}')
