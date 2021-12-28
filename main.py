@@ -68,7 +68,7 @@ def update_mask(board: np.ndarray, mask: list[list[int]], box_size: int) -> list
     """ Function to update Mask of possible valid values. """
 
     def is_list(item):
-        return isinstance(item, list)
+        return bool(isinstance(item, list))
 
     for y_pos, row in enumerate(mask):
         for numbers in filter(is_list, row):
@@ -108,7 +108,6 @@ def preprocess_board(board: np.ndarray, box_size: int) -> (np.ndarray, [list[int
         temp_mask = deepcopy(mask)
         mask = update_mask(board, mask, box_size)
         board, mask = update_board(board, mask)
-        # temp_mask = update_mask(board, mask, box_size)
     if args.verbose:
         print(f'Preprocess passes: {passes}')
 
@@ -119,7 +118,8 @@ def solve(board: np.ndarray, mask, size: int, box_size: int, dimensions: tuple[i
     """ Function to solve Sudoku with backtracking. """
     solve.iterations += 1
 
-    find = find_empty(board)
+    find = find_min_empty(board, mask)
+    # find = find_empty(board)  # Old method for finding empty cells.
     if not find:
         return True
     row, col = find
@@ -174,7 +174,7 @@ def print_board(board: np.ndarray, size: int, box_size: int) -> None:
                 print(str(board[i, j]) + ' ', end='')
 
 
-def print_mask(mask_to_print: np.ndarray, box_size: int) -> None:
+def print_mask(mask_to_print: list[list[int]], box_size: int) -> None:
     """ Pretty print Mask of possible valid values. """
     for i, row in enumerate(mask_to_print):
         if i % box_size == 0 and i != 0:
@@ -191,6 +191,28 @@ def find_empty(board: np.ndarray) -> tuple[int, int] or None:
     return None
 
 
+def find_min_empty(board: np.ndarray, mask: list[list[int]]) -> tuple[int, int] or None:
+    """ Find empty location to be filled in Sudoku,
+        where the number of possibile values is optimal. """
+
+    def not_zero_element_list(item):
+        return bool(isinstance(item, list) and len(item) != 0)
+
+    shortest_cue_lists = {}
+    for y_pos, row in enumerate(mask):
+        sorted_lists = sorted(filter(not_zero_element_list, row), key=len, reverse=True)
+        if len(sorted_lists) >= 1:
+            for item in sorted_lists:
+                shortest_cue_lists[(y_pos, row.index(item))] = len(sorted_lists[0])
+    shortest_cue_lists = dict(sorted(shortest_cue_lists.items(), key=lambda item: item[1]))
+
+    for coordinate in shortest_cue_lists.keys():
+        if board[coordinate[0]][coordinate[1]] == 0:
+            return coordinate[0], coordinate[1]  # row, column
+
+    return find_empty(board)
+
+
 if __name__ == '__main__':
     sudoku, size, dimensions = load_from_csv(FILENAME)
     box_size = int(sqrt(size))
@@ -201,6 +223,7 @@ if __name__ == '__main__':
 
     start_time = time()
     sudoku, mask = preprocess_board(sudoku, box_size)
+
     solve(sudoku, mask, size, box_size, dimensions)
     end_time = time()
 
