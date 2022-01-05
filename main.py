@@ -5,6 +5,7 @@ from math import sqrt
 import sys
 from time import time
 import numpy as np
+from typing import List, Tuple
 
 parser = argparse.ArgumentParser()
 parser.add_argument("input_file",
@@ -37,7 +38,7 @@ def load_from_csv(filename):
     return parsed, size, dimensions
 
 
-def create_mask(board: np.ndarray, dimensions: tuple[int, int]) -> list[list[int]]:
+def create_mask(board: np.ndarray, dimensions: Tuple[int, int]) -> List[List[int]]:
     """ Function to create Mask of possible valid values based on the initial sudoku Board. """
 
     mask = list(board.tolist())
@@ -64,7 +65,7 @@ def create_mask(board: np.ndarray, dimensions: tuple[int, int]) -> list[list[int
     return mask
 
 
-def update_mask(board: np.ndarray, mask: list[list[int]], box_size: int) -> list[list[int]]:
+def update_mask(board: np.ndarray, mask: List[List[int]], box_size: int) -> List[List[int]]:
     """ Function to update Mask of possible valid values. """
 
     def is_list(item):
@@ -82,7 +83,7 @@ def update_mask(board: np.ndarray, mask: list[list[int]], box_size: int) -> list
     return mask
 
 
-def update_board(board: np.ndarray, mask: list[list[int]]) -> (np.ndarray, [list[int]]):
+def update_board(board: np.ndarray, mask: List[List[int]]) -> (np.ndarray, [List[int]]):
     """ Function to update Board based on possible values Mask. """
 
     def is_one_element_list(item):
@@ -96,7 +97,7 @@ def update_board(board: np.ndarray, mask: list[list[int]]) -> (np.ndarray, [list
     return board, mask
 
 
-def preprocess_board(board: np.ndarray, box_size: int) -> (np.ndarray, [list[int]]):
+def preprocess_board(board: np.ndarray, box_size: int) -> (np.ndarray, [List[int]]):
     """ Board preprocessor to reduce necessary iterations during solving. """
 
     mask = create_mask(board, dimensions)
@@ -108,13 +109,14 @@ def preprocess_board(board: np.ndarray, box_size: int) -> (np.ndarray, [list[int
         temp_mask = deepcopy(mask)
         mask = update_mask(board, mask, box_size)
         board, mask = update_board(board, mask)
+
     if args.verbose:
         print(f'Preprocess passes: {passes}')
 
     return np.array(board), mask
 
 
-def solve(board: np.ndarray, mask, size: int, box_size: int, dimensions: tuple[int, int]) -> bool:
+def solve(board: np.ndarray, mask, size: int, box_size: int, dimensions: Tuple[int, int]) -> bool:
     """ Function to solve Sudoku with backtracking. """
     solve.iterations += 1
 
@@ -134,7 +136,7 @@ def solve(board: np.ndarray, mask, size: int, box_size: int, dimensions: tuple[i
     return False
 
 
-def valid(board: np.ndarray, number: int, pos: tuple[int, int], box_size: int) -> bool:
+def valid(board: np.ndarray, number: int, pos: Tuple[int, int], box_size: int) -> bool:
     """ Function to check if a given value is valid for the specific location of the sudoku. """
     # Check row
     location = np.where(board[pos[0]] == number)
@@ -174,7 +176,7 @@ def print_board(board: np.ndarray, size: int, box_size: int) -> None:
                 print(str(board[i, j]) + ' ', end='')
 
 
-def print_mask(mask_to_print: list[list[int]], box_size: int) -> None:
+def print_mask(mask_to_print: List[List[int]], box_size: int) -> None:
     """ Pretty print Mask of possible valid values. """
     for i, row in enumerate(mask_to_print):
         if i % box_size == 0 and i != 0:
@@ -182,7 +184,7 @@ def print_mask(mask_to_print: list[list[int]], box_size: int) -> None:
         print(row)
 
 
-def find_empty(board: np.ndarray) -> tuple[int, int] or None:
+def find_empty(board: np.ndarray) -> Tuple[int, int] or None:
     """ Find empty location to be filled in Sudoku. """
     location = np.argwhere(board == 0)
     if np.any(location):
@@ -191,9 +193,9 @@ def find_empty(board: np.ndarray) -> tuple[int, int] or None:
     return None
 
 
-def find_min_empty(board: np.ndarray, mask: list[list[int]]) -> tuple[int, int] or None:
+def find_min_empty(board: np.ndarray, mask: List[List[int]]) -> Tuple[int, int] or None:
     """ Find empty location to be filled in Sudoku,
-        where the number of possibile values is optimal. """
+        where the number of possible values is optimal. """
 
     def not_zero_element_list(item):
         return bool(isinstance(item, list) and len(item) != 0)
@@ -223,6 +225,10 @@ if __name__ == '__main__':
 
     start_time = time()
     sudoku, mask = preprocess_board(sudoku, box_size)
+
+    if args.verbose:
+        print('Preprocessed:')
+        print_board(sudoku, size, box_size)
 
     solve(sudoku, mask, size, box_size, dimensions)
     end_time = time()
