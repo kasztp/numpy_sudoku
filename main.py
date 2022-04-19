@@ -151,11 +151,10 @@ def valid(board: np.ndarray, number: int, pos: Tuple[int, int], box_size: int) -
     # Check box
     box_x = pos[1] // box_size
     box_y = pos[0] // box_size
-    box = np.where(board[(box_y * box_size):(box_y * box_size + box_size),
+    location = np.where(board[(box_y * box_size):(box_y * box_size + box_size),
                    (box_x * box_size):(box_x * box_size + box_size)] == number)
-    location = list(zip(box[0], box[1]))
 
-    if len(location) > 0:
+    if len(location[0]):
         return False
     return True
 
