@@ -4,8 +4,10 @@ from copy import deepcopy
 from math import sqrt
 import sys
 from time import time
-import numpy as np
 from typing import List, Tuple
+import numpy as np
+from tqdm import tqdm
+
 
 parser = argparse.ArgumentParser()
 parser.add_argument("input_file",
@@ -14,6 +16,10 @@ parser.add_argument("-v", "--verbose", action="store_true",
                     help="increase output verbosity")
 args = parser.parse_args()
 FILENAME = args.input_file
+
+size = 9
+box_size = 3
+dimensions = (1, 10)
 
 
 def load_from_csv(filename):
@@ -36,6 +42,30 @@ def load_from_csv(filename):
     if args.verbose:
         print(f'Board size detected: {size}x{size}')
     return parsed, size, dimensions
+
+
+def parse_sudoku_string(data):
+    """ Helper function to parse sudoku challenge. """
+    size = int(sqrt(len(data)))
+    box_size = int(sqrt(size))
+    dimensions = (1, size + 1)
+    board = []
+    row = []
+    for i, item in enumerate(data):
+        row.append(int(item))
+        if (i + 1) % size == 0:
+            board.append(row)
+            row = []
+    return np.array(board)
+
+
+def load_from_dataset(filename):
+    with open(filename) as datafile:
+        dataset_length = int(datafile.readline().strip())
+    dataset = np.loadtxt(filename, skiprows=1, dtype=str)
+    if len(dataset) == dataset_length:
+        print(f'Boards loaded successfully: {dataset_length}')
+    return dataset
 
 
 def create_mask(board: np.ndarray, dimensions: Tuple[int, int]) -> List[List[int]]:
@@ -118,7 +148,7 @@ def preprocess_board(board: np.ndarray, box_size: int) -> (np.ndarray, [List[int
 
 def solve(board: np.ndarray, mask, size: int, box_size: int, dimensions: Tuple[int, int]) -> bool:
     """ Function to solve Sudoku with backtracking. """
-    solve.iterations += 1
+    #solve.iterations += 1
 
     find = find_min_empty(board, mask)
     # find = find_empty(board)  # Old method for finding empty cells.
@@ -214,8 +244,38 @@ def find_min_empty(board: np.ndarray, mask: List[List[int]]) -> Tuple[int, int] 
     return find_empty(board)
 
 
+def solver(x):
+    size = 9
+    box_size = 3
+    dimensions = (1, 10)
+    board = parse_sudoku_string(x)
+    #print(board)
+    sudoku, mask = preprocess_board(board, box_size)
+    #print(sudoku)
+    solve(sudoku, mask, size, box_size, dimensions)
+    print(sudoku)
+    solution = ''
+    for row in sudoku:
+        for number in row:
+            solution += str(number)
+    return solution
+
+vectorize = np.vectorize(solver)
+
 if __name__ == '__main__':
-    sudoku, size, dimensions = load_from_csv(FILENAME)
+    a = load_from_dataset(FILENAME)
+    if args.verbose:
+        print(f'Parsed input: {a}')
+        print(f'Type of a: {type(a)}')
+        print(f'Shape of a: {a.shape}')
+    start_time = time()
+    #a = vectorize(a)
+    #a = np.apply_along_axis(vectorize, 0, a)
+    a = np.array([solver(x) for x in a])
+    end_time = time()
+    print(a)
+    print(f'Time to solve: {round(end_time - start_time, 6)}')
+    """sudoku, size, dimensions = load_from_csv(FILENAME)
     box_size = int(sqrt(size))
     solve.iterations = 0
 
@@ -238,3 +298,4 @@ if __name__ == '__main__':
     if args.verbose:
         print(f'Iterations: {solve.iterations}\n')
     print(f'Time to solve: {round(end_time - start_time, 6)}')
+"""
